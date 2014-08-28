@@ -78,6 +78,56 @@ def get_dirty_pages(dumpfile):
         
   return (dirtiness_dict, continuity_dict)
 
+def sha256hashing(pnum1, pnum2, dumpfile):
+  import hashlib as hl
+  f = open(dumpfile, "rb")
+  f.seek((pnum1-1)*4096,0)
+  b1 = bytearray(f.read(4096))
+  f.seek((pnum2-1)*4096,0)
+  b2 = bytearray(f.read(4096))
+  hash_obj1 = hl.sha256(b1)
+  hash1 = hash_obj1.hexdigest()
+  hash_obj2 = hl.sha256(b2)
+  hash2 = hash_obj2.hexdigest()
+  return(hash1 == hash2)
+
+def findSHA256hash(pnum, fptr):
+  import hashlib as hl
+  fptr.seek((pnum-1)*4096,0)
+  a = bytearray(fptr.read(4096))
+  hash_obj = hl.sha256(a)
+  hash_1 = hash_obj.hexdigest()
+  return hash_1
+
+def FindDuplicatePages(dumpfile):
+  pageHashtable = {}
+  duplicates_dict={}
+  f = open(dumpfile,"rb")
+  f.seek(0,os.SEEK_END)
+  size = f.tell()
+  num_pages = int(size/4096)
+  f.seek(0,0)
+  page_num = 1
+  collision_count = 0
+  while page_num != num_pages:
+    cur_page = bytearray(f.read(4096))
+    sha256hash_val = findSHA256hash(page_num,f) 
+    if sha256hash_val in pageHashtable:
+      collision_count = collision_count + 1
+      duplist = duplicates_dict[sha256hash_val]
+      duplist.append(page_num)
+      duplicates_dict[sha256hash_val] = duplist
+    else:
+      pageHashtable[sha256hash_val] = page_num
+      dup_list = []
+      dup_list.append(page_num)
+      duplicates_dict[sha256hash_val] = dup_list
+    page_num = page_num + 1
+  duplicates_list = []
+  for k in duplicates_dict:
+    duplicates_list.append(duplicates_dict[k])
+  return (duplicates_list, collision_count)
+
 def print_bytes(XORdump):
   f = bytearray(open(XORdump, "rb").read())
   for i in range(len(f)):
@@ -87,5 +137,7 @@ def print_bytes(XORdump):
     
 if __name__ == "__main__":
   #analyze_dumps_bbb("file4.dump", "file16.dump")
-  result = get_dirty_pages("dirty_dump.bin")
-  print("List of dirty pages with percentage dirtiness :\n",result)
+  #result = get_dirty_pages("dirty_dump.bin")
+  #print("List of dirty pages with percentage dirtiness :\n",result)
+  duplicates = FindDuplicatePages("file16.dump")
+  print(duplicates)
