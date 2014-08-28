@@ -49,18 +49,27 @@ def get_dirty_pages(dumpfile):
   count = size/4000
   print("Page Count : ",count)
   dirty_pages=[]
+  dirtiness_dict = {}
   page_num = 0
   while (page_num != count):
     #print("Page num ",page_num)
     cur_page = bytearray(f.read(4000))
     page_num = page_num + 1
+    cur_page_inserted = 0
+    dirty_bytes = 0
     for i in range(len(cur_page)):
       #print("byte ",cur_page[i], " page : ",page_num)
       if cur_page[i] != 0:
-        dirty_pages.append(page_num)
-        page_num = page_num + 1
-        break
-  return dirty_pages
+        dirty_bytes = dirty_bytes + 1
+        if cur_page_inserted == 0:
+          dirty_pages.append(page_num)
+          cur_page_inserted = 1
+    if cur_page_inserted == 1:
+      dirtiness = (dirty_bytes/4000)*100
+      dirtiness = round(dirtiness,3)
+      dirtiness_dict[page_num] = dirtiness
+        
+  return dirtiness_dict
 
 def print_bytes(XORdump):
   f = bytearray(open(XORdump, "rb").read())
@@ -70,6 +79,6 @@ def print_bytes(XORdump):
 
     
 if __name__ == "__main__":
-  analyze_dumps_bbb("file4.dump", "file16.dump")
+  #analyze_dumps_bbb("file4.dump", "file16.dump")
   result = get_dirty_pages("dirty_dump.bin")
-  print("List of dirty pages :\n",result)
+  print("List of dirty pages with percentage dirtiness :\n",result)
