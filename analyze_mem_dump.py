@@ -50,6 +50,7 @@ def get_dirty_pages(dumpfile):
   print("Page Count : ",count)
   dirty_pages=[]
   dirtiness_dict = {}
+  continuity_dict = {}
   page_num = 0
   while (page_num != count):
     #print("Page num ",page_num)
@@ -57,6 +58,8 @@ def get_dirty_pages(dumpfile):
     page_num = page_num + 1
     cur_page_inserted = 0
     dirty_bytes = 0
+    prev_index = 0
+    is_continuous = 1
     for i in range(len(cur_page)):
       #print("byte ",cur_page[i], " page : ",page_num)
       if cur_page[i] != 0:
@@ -64,12 +67,16 @@ def get_dirty_pages(dumpfile):
         if cur_page_inserted == 0:
           dirty_pages.append(page_num)
           cur_page_inserted = 1
+        if (i - prev_index) > 1:
+          is_continuous = 0
+        prev_index = i
     if cur_page_inserted == 1:
       dirtiness = (dirty_bytes/4000)*100
       dirtiness = round(dirtiness,3)
       dirtiness_dict[page_num] = dirtiness
+      continuity_dict[page_num] = is_continuous
         
-  return dirtiness_dict
+  return (dirtiness_dict, continuity_dict)
 
 def print_bytes(XORdump):
   f = bytearray(open(XORdump, "rb").read())
