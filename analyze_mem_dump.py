@@ -112,16 +112,22 @@ def FindDuplicatePages(dumpfile):
   while page_num != num_pages:
     cur_page = bytearray(f.read(4096))
     sha256hash_val = findSHA256hash(page_num,f) 
-    if sha256hash_val in pageHashtable:
+    if (sha256hash_val in pageHashtable) and (sha256hash_val in duplicates_dict):
       collision_count = collision_count + 1
       duplist = duplicates_dict[sha256hash_val]
       duplist.append(page_num)
       duplicates_dict[sha256hash_val] = duplist
     else:
       pageHashtable[sha256hash_val] = page_num
+      all_zeroes = 1
+      for i in range(len(cur_page)):
+        if cur_page[i] != 0:
+          all_zeroes = 0
+          break
       dup_list = []
-      dup_list.append(page_num)
-      duplicates_dict[sha256hash_val] = dup_list
+      if all_zeroes == 0:
+        dup_list.append(page_num)
+        duplicates_dict[sha256hash_val] = dup_list
     page_num = page_num + 1
   duplicates_list = []
   for k in duplicates_dict:
@@ -140,4 +146,7 @@ if __name__ == "__main__":
   #result = get_dirty_pages("dirty_dump.bin")
   #print("List of dirty pages with percentage dirtiness :\n",result)
   duplicates = FindDuplicatePages("file16.dump")
-  print(duplicates)
+  duplist = duplicates[0]
+  for list1 in duplist:
+    if(len(list1)) > 1:
+      print(list1)
