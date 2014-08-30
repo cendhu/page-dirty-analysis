@@ -91,10 +91,10 @@ def sha256hashing(pnum1, pnum2, dumpfile):
   hash2 = hash_obj2.hexdigest()
   return(hash1 == hash2)
 
-def findSHA256hash(pnum, fptr):
+def findSHA256hash(num, nbytes, fptr):
   import hashlib as hl
-  fptr.seek((pnum-1)*4096,0)
-  a = bytearray(fptr.read(4096))
+  fptr.seek((num-1)*nbytes,0)
+  a = bytearray(fptr.read(nbytes))
   hash_obj = hl.sha256(a)
   hash_1 = hash_obj.hexdigest()
   return hash_1
@@ -111,7 +111,7 @@ def FindDuplicatePages(dumpfile):
   collision_count = 0
   while page_num != num_pages:
     cur_page = bytearray(f.read(4096))
-    sha256hash_val = findSHA256hash(page_num,f) 
+    sha256hash_val = findSHA256hash(page_num, 4096, f) 
     if (sha256hash_val in pageHashtable) and (sha256hash_val in duplicates_dict):
       collision_count = collision_count + 1
       duplist = duplicates_dict[sha256hash_val]
@@ -134,6 +134,46 @@ def FindDuplicatePages(dumpfile):
     duplicates_list.append(duplicates_dict[k])
   return (duplicates_list, collision_count)
 
+def SubPageDuplicates(dumpfile):
+  subpageHashTable = {}
+  f = open(dumpfile, "rb")
+  f.seek(0, os.SEEK_END)
+  size = f.tell()
+  num_pages = int(size/4096)
+  num_blocks = num_pages*4
+  f.seek(0,0)
+  page_num = 1
+  block_num = 1
+  while page_num != num_pages:
+    cur_subpage = bytearray(f.read(1024))
+    sha256hash_val = findSHA256hash(block_num, 1024, f)
+    if sha256hash_val in subpageHashTable:
+      sub_duplist = subpageHashTable[sha256hash_val]
+      duplist = []
+      duplist.append(page_num)
+      duplist.append(block_num)
+      sub_duplist.append(duplist)
+      subpageHashTable[sha256hash_val] = sub_duplist
+      block_num = block_num + 1
+    else:
+      all_zeroes = 1
+      for i in range(len(cur_subpage)):
+        if cur_subpage[i] != 0:
+          all_zeroes = 0
+          break
+      duplist = []
+      duplist.append(page_num)
+      duplist.append(block_num)
+      sub_duplist = []
+      sub_duplist.append(duplist)
+      if all_zeroes == 0:
+        subpageHashTable[sha256hash_val] = sub_duplist
+      block_num = block_num + 1
+    if block_num > 4:
+      page_num = page_num + 1
+      block_num = 1
+  return subpageHashTable
+
 def print_bytes(XORdump):
   f = bytearray(open(XORdump, "rb").read())
   for i in range(len(f)):
@@ -150,3 +190,5 @@ if __name__ == "__main__":
   for list1 in duplist:
     if(len(list1)) > 1:
       print(list1)
+  subpage_dict = SubPageDuplicates("dirty_dump.bin")
+  print(subpage_dict)
