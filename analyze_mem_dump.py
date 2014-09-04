@@ -1,26 +1,5 @@
 import os
 
-def analyze_dumps(dump1, dump2):
-  f1_bytes = open(dump1, "rb").read()
-  f2_bytes = open(dump2, "rb").read()
-  f_bin = open("dirty_dump.bin", "wb")
-  f_dec = open("dirty_dump.dec","w")
-  try:
-    print(len(f1_bytes))
-    for index in range(len(f1_bytes)):
-      #if index%10000000 == 0:
-      #print(f1_bytes[index]," ",f2_bytes[index])
-      new_int = f1_bytes[index] ^ f2_bytes[index]
-      new_byte = bytes(new_int)
-      new_binary = bin(new_int)[2:]
-      #if index%10000000 == 0:
-      #print(new_int,">>>>>",new_byte)
-      f_bin.write(new_byte)
-      f_dec.write(new_binary)
-  finally:
-    f_dec.close()
-    f_bin.close()
-
 def analyze_dumps_bbb(dump1, dump2):
   f1 = open(dump1, "rb")
   f2 = open(dump2, "rb")
@@ -96,7 +75,7 @@ def get_dirty_pages(dumpfile):
   size = f.tell()
   f.seek(0,0)
   print("Size of dump : ",size, "Bytes")
-  count = size/4000
+  count = int(size/4096)
   print("Page Count : ",count)
   dirty_pages=[]
   dirtiness_dict = {}
@@ -104,7 +83,7 @@ def get_dirty_pages(dumpfile):
   page_num = 0
   while (page_num != count):
     #print("Page num ",page_num)
-    cur_page = bytearray(f.read(4000))
+    cur_page = bytearray(f.read(4096))
     page_num = page_num + 1
     cur_page_inserted = 0
     dirty_bytes = 0
@@ -121,7 +100,7 @@ def get_dirty_pages(dumpfile):
           is_continuous = 0
         prev_index = i
     if cur_page_inserted == 1:
-      dirtiness = (dirty_bytes/4000)*100
+      dirtiness = (dirty_bytes/4096)*100
       dirtiness = round(dirtiness,3)
       dirtiness_dict[page_num] = dirtiness
       continuity_dict[page_num] = is_continuous
@@ -184,19 +163,19 @@ def FindDuplicatePages(dumpfile):
     duplicates_list.append(duplicates_dict[k])
   return (duplicates_list, collision_count)
 
-def SubPageDuplicates(dumpfile):
+def SubPageDuplicates(dumpfile,n):
   subpageHashTable = {}
   f = open(dumpfile, "rb")
   f.seek(0, os.SEEK_END)
   size = f.tell()
   num_pages = int(size/4096)
-  num_blocks = num_pages*4
+  num_blocks = num_pages*n
   f.seek(0,0)
   page_num = 1
   block_num = 1
   while page_num != num_pages:
-    cur_subpage = bytearray(f.read(1024))
-    sha256hash_val = findSHA256hash(block_num, 1024, f)
+    cur_subpage = bytearray(f.read(int(4096/n)))
+    sha256hash_val = findSHA256hash(block_num, int(4096/n), f)
     if sha256hash_val in subpageHashTable:
       sub_duplist = subpageHashTable[sha256hash_val]
       duplist = []
@@ -219,7 +198,7 @@ def SubPageDuplicates(dumpfile):
       if all_zeroes == 0:
         subpageHashTable[sha256hash_val] = sub_duplist
       block_num = block_num + 1
-    if block_num > 4:
+    if block_num > n:
       page_num = page_num + 1
       block_num = 1
   return subpageHashTable
@@ -233,14 +212,13 @@ def print_bytes(XORdump):
     
 if __name__ == "__main__":
   analyze_dumps_bbb_mem("file4.dump", "file16.dump", "dirty_dump.bin")
-  '''
   result = get_dirty_pages("dirty_dump.bin")
   print("List of dirty pages with percentage dirtiness :\n",result)
   duplicates = FindDuplicatePages("file16.dump")
   duplist = duplicates[0]
+  print("List of duplicate pages :\n")
   for list1 in duplist:
     if(len(list1)) > 1:
       print(list1)
-  subpage_dict = SubPageDuplicates("dirty_dump.bin")
-  print(subpage_dict)
-  '''
+  #subpage_dict = SubPageDuplicates("file16.dump",4)
+  #print("Dictionary of sub page level duplicates : \n",subpage_dict)
