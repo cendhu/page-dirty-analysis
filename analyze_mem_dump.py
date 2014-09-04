@@ -40,6 +40,56 @@ def analyze_dumps_bbb(dump1, dump2):
     f1.close()
     f2.close()
 
+def analyze_dumps_bbb_mem(dump1, dump2, final_dump):
+  f1 = open(dump1, "rb")
+  f1.seek(0,os.SEEK_END)
+  size1 = f1.tell()
+  f1.seek(0,0)
+  f2 = open(dump2, "rb")
+  f2.seek(0,os.SEEK_END)
+  size2 = f2.tell()
+  f2.seek(0,0)
+  f_bin = open(final_dump, "wb")
+  one_time_chunk = 100*1024*1024 #100 MB at a time
+  if size1 != size2:
+    print("Dump sizes not compatible!")
+    exit(1)
+
+  elif size1 <= one_time_chunk:
+    try:
+      byte1 = bytearray(f1.read())
+      byte2 = bytearray(f2.read())
+      for i in range(len(byte1)):
+        old_byte = byte1[i]
+        byte1[i] = byte1[i] ^ byte2[i]
+      f_bin.write(byte1)
+    finally:
+      f_bin.close()
+      f1.close()
+      f2.close()
+
+  else:
+    loop_count = int(size1/one_time_chunk) if ((size1 % one_time_chunk) == 0) else int((size1/one_time_chunk) + 1)
+    last_remain_size = 0 if ((size1 % one_time_chunk) == 0) else (size1 - ((loop_count-1) * one_time_chunk)) 
+    try:
+      count = 1
+      while count <= loop_count:
+        if count != loop_count:
+          byte1 = bytearray(f1.read(one_time_chunk))
+          byte2 = bytearray(f2.read(one_time_chunk))
+        else:
+          byte1 = bytearray(f1.read(last_remain_size))
+          byte2 = bytearray(f2.read(last_remain_size))
+        for i in range(len(byte1)):
+          old_byte = byte1[i]
+          byte1[i] = byte1[i] ^ byte2[i]
+        f_bin.write(byte1)
+        count = count + 1
+    finally:
+      f_bin.close()
+      f1.close()
+      f2.close()
+
 def get_dirty_pages(dumpfile):
   f = open(dumpfile, "rb")
   f.seek(0,os.SEEK_END)
@@ -182,9 +232,10 @@ def print_bytes(XORdump):
 
     
 if __name__ == "__main__":
-  #analyze_dumps_bbb("file4.dump", "file16.dump")
-  #result = get_dirty_pages("dirty_dump.bin")
-  #print("List of dirty pages with percentage dirtiness :\n",result)
+  analyze_dumps_bbb_mem("file4.dump", "file16.dump", "dirty_dump.bin")
+  '''
+  result = get_dirty_pages("dirty_dump.bin")
+  print("List of dirty pages with percentage dirtiness :\n",result)
   duplicates = FindDuplicatePages("file16.dump")
   duplist = duplicates[0]
   for list1 in duplist:
@@ -192,3 +243,4 @@ if __name__ == "__main__":
       print(list1)
   subpage_dict = SubPageDuplicates("dirty_dump.bin")
   print(subpage_dict)
+  '''
