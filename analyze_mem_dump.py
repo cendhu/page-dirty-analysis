@@ -1,9 +1,14 @@
 import os
 
-def analyze_dumps_bbb(dump1, dump2):
+'''
+Analyze the two dump files byte by byte. Take each byte and then 
+a bitwise XOR of the two to know the difference. Write the difference 
+to the file xorfile.
+'''
+def analyze_dumps_bbb(dump1, dump2, xorfile):
   f1 = open(dump1, "rb")
   f2 = open(dump2, "rb")
-  f_bin = open("dirty_dump.bin", "wb")
+  f_bin = open(xorfile, "wb")
   try:
     byte1 = bytearray(f1.read())
     byte2 = bytearray(f2.read())
@@ -19,6 +24,10 @@ def analyze_dumps_bbb(dump1, dump2):
     f1.close()
     f2.close()
 
+'''
+Does the same job as the above function analyze_dumps_bbb but improves on
+memory requirements of the function to analyze large files.
+'''
 def analyze_dumps_bbb_mem(dump1, dump2, final_dump):
   f1 = open(dump1, "rb")
   f1.seek(0,os.SEEK_END)
@@ -69,6 +78,10 @@ def analyze_dumps_bbb_mem(dump1, dump2, final_dump):
       f1.close()
       f2.close()
 
+'''
+Get lists of dirty pages in the memory area. Analyze the file to 
+which XOR values were written in analyze_dumps_bbb.
+'''
 def get_dirty_pages(dumpfile):
   f = open(dumpfile, "rb")
   f.seek(0,os.SEEK_END)
@@ -128,6 +141,10 @@ def findSHA256hash(num, nbytes, fptr):
   hash_1 = hash_obj.hexdigest()
   return hash_1
 
+'''
+Find the duplicate pages and put them to separate lists. All zero-pages
+excluded!
+'''
 def FindDuplicatePages(dumpfile):
   pageHashtable = {}
   duplicates_dict={}
@@ -163,6 +180,10 @@ def FindDuplicatePages(dumpfile):
     duplicates_list.append(duplicates_dict[k])
   return (duplicates_list, collision_count)
 
+'''
+Find sub-page level duplicates. Divide each page in 'n' parts and
+prepare lists for sub-duplicates.
+'''
 def SubPageDuplicates(dumpfile,n):
   subpageHashTable = {}
   f = open(dumpfile, "rb")
@@ -209,7 +230,9 @@ def print_bytes(XORdump):
     if f[1]:
       print("Byte ",i," : ",f[i])
 
-    
+'''
+Call whatever functions we need here.
+'''
 if __name__ == "__main__":
   analyze_dumps_bbb_mem("file4.dump", "file16.dump", "dirty_dump.bin")
   result = get_dirty_pages("dirty_dump.bin")
@@ -217,8 +240,10 @@ if __name__ == "__main__":
   duplicates = FindDuplicatePages("file16.dump")
   duplist = duplicates[0]
   print("List of duplicate pages :\n")
+  group_num = 1
   for list1 in duplist:
     if(len(list1)) > 1:
-      print(list1)
-  #subpage_dict = SubPageDuplicates("file16.dump",4)
-  #print("Dictionary of sub page level duplicates : \n",subpage_dict)
+      print(group_num," : ",list1)
+      group_num = group_num + 1
+  subpage_dict = SubPageDuplicates("file16.dump",4)
+  print("Dictionary of sub page level duplicates : \n",subpage_dict)
