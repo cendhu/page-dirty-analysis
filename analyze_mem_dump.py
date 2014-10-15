@@ -385,15 +385,21 @@ Find Ddelta duplicates.
 '''
 def DdeltaDuplicates(source,target):
   source_hashes = GetSpookyHashes(source)
-  duplicates = []
+  duplicates = {}
   num_dups = 0
   l = len(target)
   print("len of target : ",l)
   for i in range(l):
     t_spooky = subprocess.call(["python2", "spooky_tgt.py", target[i]])
     if t_spooky in source_hashes:
-      duplicates.append(target[i])
+      list_dup = duplicates[t_spooky]
+      list_dup.append(target[i])
+      duplicates[t_spooky] = list_dup
       num_dups = num_dups + 1
+    else:
+      list_dup = []
+      list_dup.append(target[i])
+      duplicates[t_spooky] = list_dup
   return duplicates
  
 '''
