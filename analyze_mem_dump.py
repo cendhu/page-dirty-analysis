@@ -381,6 +381,19 @@ def GetSpookyHashes(source_chunks):
   return source_hashes
 
 '''
+Get xxhash : another non-cryptographic fast hashing algorithm.
+Faster than spooky hash. Has support for Python 3.
+'''
+def GetXXHash(source_chunks):
+  import xxhash
+  source_hashes = {}
+  l = len(source_chunks)
+  for i in range(l):
+    xxh32 = xxhash.xxh32(source_chunks[i])
+    source_hashes[xxh32] = source_chunks[i]
+  return source_hashes
+
+'''
 Find Ddelta duplicates.
 '''
 def DdeltaDuplicates(source,target):
